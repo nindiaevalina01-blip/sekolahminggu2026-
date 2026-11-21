@@ -1,0 +1,845 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal Absensi - GPdI Immanuel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .scale-in-center { animation: scale-in-center 0.3s cubic-bezier(0.250, 0.460, 0.450, 0.940) both; }
+        @keyframes scale-in-center { 
+            0% { transform: scale(0.95); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .card-glow:hover { box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.2); }
+        .presence-active { border-color: #6366f1; background-color: #f5f3ff; }
+        .glass { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+
+    <!-- Screen Login -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center p-6">
+        <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-100 scale-in-center">
+            <div class="bg-indigo-600 p-10 text-white text-center relative overflow-hidden">
+                <div class="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+                <div class="relative z-10">
+                    <div class="bg-white/20 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6 backdrop-blur-sm shadow-inner">
+                        <i data-lucide="church" class="w-10 h-10"></i>
+                    </div>
+                    <h1 class="text-3xl font-extrabold tracking-tight">Portal Absensi</h1>
+                    <p class="mt-2 text-indigo-100 font-medium">GPdI Immanuel Berastagi</p>
+                </div>
+            </div>
+            
+            <form id="login-form" onsubmit="handleLogin(event)" class="p-8 space-y-6">
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-slate-700 ml-1">Username</label>
+                    <input type="text" id="username" value="SM2026" required
+                        class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-sm font-semibold text-slate-700 ml-1">Password</label>
+                    <input type="password" id="password" value="123456" required
+                        class="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none transition-all">
+                </div>
+                <button type="submit" 
+                    class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-100 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    Masuk Sekarang <i data-lucide="log-in" class="w-5 h-5"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="main-dashboard" class="hidden">
+        <nav class="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between items-center h-20">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-indigo-600 p-2.5 rounded-xl text-white shadow-md">
+                            <i data-lucide="church" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold text-slate-900 leading-none">GPdI Immanuel</h1>
+                            <p class="text-[10px] text-slate-500 font-bold mt-1 tracking-[0.1em] uppercase">Berastagi - Portal Absensi</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <button onclick="toggleModal('manual')" class="bg-white border border-slate-200 text-slate-700 px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-50 transition-all">
+                            <i data-lucide="keypad" class="w-4 h-4 text-indigo-600"></i> <span class="hidden lg:inline">Kode Hadir</span>
+                        </button>
+                        
+                        <button onclick="toggleModal('report')" class="bg-white border border-slate-200 text-slate-700 px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-slate-50 transition-all">
+                            <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600"></i> <span class="hidden lg:inline">Laporan</span>
+                        </button>
+
+                        <button onclick="toggleModal('kia-massal')" class="bg-indigo-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2 hover:bg-indigo-700 transition-all shadow-lg">
+                            <i data-lucide="contact-2" class="w-4 h-4"></i> <span>Cetak KIA</span>
+                        </button>
+
+                        <button onclick="logout()" class="p-2.5 bg-slate-100 text-slate-500 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all" title="Keluar">
+                            <i data-lucide="log-out" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pb-20">
+            <!-- Stats Row -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+                <div class="bg-gradient-to-br from-indigo-600 to-blue-700 p-6 rounded-[2rem] text-white shadow-xl">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-indigo-100 text-sm font-medium">Hadir Hari Ini</p>
+                            <h3 id="stat-present" class="text-5xl font-black mt-2 tracking-tighter">0</h3>
+                        </div>
+                        <div class="bg-white/20 p-3 rounded-2xl"><i data-lucide="user-check" class="w-7 h-7"></i></div>
+                    </div>
+                    <p class="mt-4 text-xs text-indigo-200 font-bold uppercase tracking-widest">Total <span id="stat-total">0</span> Murid</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center mb-4">
+                        <p class="text-slate-500 text-sm font-medium">Progress Kehadiran</p>
+                        <span id="stat-percent" class="text-indigo-600 font-bold text-lg">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 h-4 rounded-full overflow-hidden">
+                        <div id="stat-bar" class="bg-indigo-500 h-full transition-all duration-700" style="width: 0%"></div>
+                    </div>
+                    <p class="mt-4 text-[11px] text-slate-400 font-medium italic">Sinkronisasi data otomatis di browser Anda.</p>
+                </div>
+
+                <div class="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm flex flex-col justify-center">
+                    <p class="text-slate-500 text-sm font-medium">Tanggal Kebaktian</p>
+                    <h3 id="current-date" class="text-xl font-bold mt-1 text-slate-900">-</h3>
+                    <p class="text-xs text-indigo-600 font-semibold mt-1" id="today-code">-</p>
+                </div>
+            </div>
+
+            <!-- Filters and Search -->
+            <div class="flex flex-col md:flex-row gap-6 items-center justify-between mb-8">
+                <div id="class-tabs" class="flex bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm overflow-x-auto no-scrollbar w-full md:w-auto">
+                    <button onclick="filterClass('Semua')" class="tab-btn active px-6 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap bg-indigo-600 text-white shadow-lg transition-all">Semua</button>
+                    <button onclick="filterClass('Cahaya')" class="tab-btn px-6 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap text-slate-500 hover:text-slate-800 transition-all">Cahaya</button>
+                    <button onclick="filterClass('Bintang')" class="tab-btn px-6 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap text-slate-500 hover:text-slate-800 transition-all">Bintang</button>
+                    <button onclick="filterClass('Pra Remaja')" class="tab-btn px-6 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap text-slate-500 hover:text-slate-800 transition-all">Pra Remaja</button>
+                </div>
+
+                <div class="relative w-full md:w-96">
+                    <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5"></i>
+                    <input type="text" id="search-input" placeholder="Cari ID atau Nama Murid..." oninput="handleSearch()"
+                        class="w-full pl-12 pr-4 py-4 bg-white rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm transition-all text-sm font-medium">
+                </div>
+            </div>
+
+            <!-- Student Cards Grid -->
+            <div id="student-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
+        </main>
+    </div>
+
+    <!-- Modal Laporan -->
+    <div id="modal-report" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl scale-in-center">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-black text-slate-900">Cetak Laporan</h3>
+                <button onclick="toggleModal('report')" class="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><i data-lucide="x"></i></button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label class="text-xs font-bold text-slate-500 uppercase ml-1 mb-1 block">Nama Guru Sekolah Minggu</label>
+                    <input type="text" id="teacher-name" placeholder="Ketik nama di sini..." 
+                        class="w-full px-5 py-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-indigo-500 outline-none font-bold text-sm bg-slate-50">
+                </div>
+                <div class="grid grid-cols-1 gap-2 pt-2">
+                    <button onclick="downloadPDF('Cahaya')" class="w-full text-left bg-white text-slate-700 font-bold py-4 px-5 rounded-2xl border border-slate-200 text-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors flex justify-between items-center">
+                        Kelas Cahaya <i data-lucide="chevron-right" class="w-5 h-5 text-indigo-400"></i>
+                    </button>
+                    <button onclick="downloadPDF('Bintang')" class="w-full text-left bg-white text-slate-700 font-bold py-4 px-5 rounded-2xl border border-slate-200 text-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors flex justify-between items-center">
+                        Kelas Bintang <i data-lucide="chevron-right" class="w-5 h-5 text-indigo-400"></i>
+                    </button>
+                    <button onclick="downloadPDF('Pra Remaja')" class="w-full text-left bg-white text-slate-700 font-bold py-4 px-5 rounded-2xl border border-slate-200 text-sm hover:bg-indigo-50 hover:border-indigo-200 transition-colors flex justify-between items-center">
+                        Kelas Pra Remaja <i data-lucide="chevron-right" class="w-5 h-5 text-indigo-400"></i>
+                    </button>
+                    <button onclick="downloadPDF('Semua')" class="mt-2 w-full bg-indigo-600 hover:bg-indigo-700 active:scale-[0.98] text-white font-bold py-4 px-5 rounded-2xl shadow-xl text-sm flex items-center justify-center gap-2 transition-all">
+                        <i data-lucide="download" class="w-5 h-5"></i> Cetak Seluruh Absensi (PDF)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal KIA Massal -->
+    <div id="modal-kia-massal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl scale-in-center">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-black text-slate-900">Cetak KIA</h3>
+                <button onclick="toggleModal('kia-massal')" class="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><i data-lucide="x"></i></button>
+            </div>
+            <div class="space-y-3">
+                <p class="text-xs text-slate-500 font-medium mb-4">Pilih kelas untuk mengunduh Kartu Identitas Anak (KIA) dalam format PDF.</p>
+                <button onclick="downloadBatchKIA('Cahaya')" class="w-full bg-slate-50 text-indigo-700 font-bold py-4 px-5 rounded-2xl border border-indigo-100 text-sm hover:bg-indigo-600 hover:text-white transition-all flex justify-between items-center">
+                    KIA Kelas Cahaya <i data-lucide="printer" class="w-5 h-5"></i>
+                </button>
+                <button onclick="downloadBatchKIA('Bintang')" class="w-full bg-slate-50 text-indigo-700 font-bold py-4 px-5 rounded-2xl border border-indigo-100 text-sm hover:bg-indigo-600 hover:text-white transition-all flex justify-between items-center">
+                    KIA Kelas Bintang <i data-lucide="printer" class="w-5 h-5"></i>
+                </button>
+                <button onclick="downloadBatchKIA('Pra Remaja')" class="w-full bg-slate-50 text-indigo-700 font-bold py-4 px-5 rounded-2xl border border-indigo-100 text-sm hover:bg-indigo-600 hover:text-white transition-all flex justify-between items-center">
+                    KIA Kelas Pra Remaja <i data-lucide="printer" class="w-5 h-5"></i>
+                </button>
+                <div class="pt-4">
+                    <button onclick="downloadBatchKIA('Semua')" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold py-5 px-5 rounded-2xl shadow-2xl text-sm flex items-center justify-center gap-3 active:scale-[0.98] transition-all">
+                        <i data-lucide="layers" class="w-5 h-5"></i> CETAK SEMUA KIA (PDF)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Manual Input -->
+    <div id="modal-manual" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-6">
+        <div class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl scale-in-center">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-2xl font-bold text-slate-900">Input Kode Hadir</h3>
+                <button onclick="toggleModal('manual')" class="p-2 text-slate-400 hover:bg-slate-100 rounded-full"><i data-lucide="x"></i></button>
+            </div>
+            <input type="text" id="manual-input" placeholder="Contoh: IMN-001" 
+                class="w-full px-6 py-4 rounded-2xl border-2 border-slate-100 focus:border-indigo-500 outline-none text-lg font-bold uppercase mb-6 tracking-wider text-center">
+            <button onclick="submitManual()" class="w-full bg-indigo-600 text-white font-bold py-4 rounded-2xl shadow-xl hover:bg-indigo-700 active:scale-[0.98] transition-all">
+                Konfirmasi Hadir
+            </button>
+        </div>
+    </div>
+
+    <!-- Upload Photo Input -->
+    <input type="file" id="photo-upload" class="hidden" accept="image/*" onchange="handlePhotoFile(event)">
+    
+    <!-- Notification Toast -->
+    <div id="toast" class="hidden fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] px-8 py-4 rounded-2xl text-white shadow-2xl font-bold transition-all transform scale-100"></div>
+
+    <script>
+        // Data Murid Bawaan Lengkap (Cahaya, Bintang, Pra Remaja)
+        const INITIAL_STUDENTS = [
+            // KELAS CAHAYA
+            { id: "IMN-001", name: "Eldo Desenta Purba", age: 9, school: "3 SD", class: "Cahaya", photo: "1RwI1Nwmdgq3w-m9p862JmtsYqBBRt8cD", history: ["4/1/2026","11/1/2026","8/3/2026","10/5/2026","17/5/2026","31/5/2026","07/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-002", name: "Fahlepta Surbakti", age: 9, school: "3 SD", class: "Cahaya", photo: "1r1qy5e28o3j84ezxKEe2AevrX8PUZDVq", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-004", name: "Velizio Sitepu", age: 8, school: "3 SD", class: "Cahaya", photo: "1Gh_MVVVCJdtlOXvIYzfPyOaC5SVF9MMN", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","17/5/2026","31/5/2026","07/6/2026","14/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-005", name: "Sergius Silalahi", age: 10, school: "4 SD", class: "Cahaya", photo: "1yrZ4na2wPmCvCtVw2lOuLsDqJMSMWa6u", history: ["4/1/2026","11/1/2026","8/3/2026","17/5/2026","31/5/2026","07/6/2026","14/6/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-006", name: "Gabriel Ginting", age: 11, school: "4 SD", class: "Cahaya", photo: "1Dr6tqR4_PhlsjRZhAf6OvqzNrIVdYzAr", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","24/5/2026","31/5/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-007", name: "Ria Silalahi", age: 12, school: "5 SD", class: "Cahaya", photo: "1SlK7H3jSo7vg3jP_TfeEWVBmdAgwZQEa", history: ["4/1/2026","11/1/2026","8/3/2026","17/5/2026","31/5/2026","07/6/2026","14/6/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-008", name: "Elsa Purba", age: 11, school: "5 SD", class: "Cahaya", photo: "1gLaUM1Db3TSf8tDIXrPGT9VIKuMXZrey", history: ["4/1/2026","11/1/2026","8/3/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-009", name: "Enola", age: 11, school: "5 SD", class: "Cahaya", photo: "1g5qIdaeWdZtxhhNmhNcf8X-RezgqqYvb", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-010", name: "Adelia Sibarani", age: 11, school: "5 SD", class: "Cahaya", photo: "1eKP419eMXNNjJj7kxB7ugDcVbA3XUMaO", history: ["4/1/2026","11/1/2026","8/3/2026","10/5/2026","17/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-011", name: "Aurel Barus", age: 11, school: "5 SD", class: "Cahaya", photo: "14qdFa4nqKj6Zf6UQxX6tdg3XLn_k63id", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","17/5/2026","31/5/2026","07/6/2026","14/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-014", name: "Evelin Br Ginting", age: 9, school: "3 SD", class: "Cahaya", photo: "1NDQwlj7CD8zDH1NnpSrEXNuTr0CFjc_F", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-015", name: "Alvina Gabriella", age: 9, school: "3 SD", class: "Cahaya", photo: "1tqf3DQteRl8d3xmgKyZOn5RpC8WVXeSD", history: ["4/1/2026","11/1/2026","8/3/2026","31/5/2026","05/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-016", name: "Kirel Adrelia Sibero", age: 9, school: "3 SD", class: "Cahaya", photo: "1jb66Ujz1_lhzL_egQ1IOqRiP6hzXEW70", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","17/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-017", name: "Ema Br Sinaga", age: 10, school: "4 SD", class: "Cahaya", photo: "1d_eBGNN-txA79UMsC5IYylh1yJ7Gm9BK", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","24/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-020", name: "Cristina Oktaviani Br Tarigan", age: 11, school: "5 SD", class: "Cahaya", photo: "1aFYqZ4XWdNpQN1rYSx1USf5aL-kWsPhc", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-021", name: "Keren Eklesia Br Ginting", age: 11, school: "5 SD", class: "Cahaya", photo: "1EdiNXcgZZTZBrFCKsgSeyBRjkkotwkSp", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-022", name: "Edgard Sharos Simbolon", age: 10, school: "4 SD", class: "Cahaya", photo: "1XH-uWv063JwqiHV6-AJXdbsL42xc9RHb", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-024", name: "Adriel Tarigan", age: 10, school: "3 SD", class: "Cahaya", photo: "1I7UHJmMvfkAg0LNdxl96C7yNp4A2zIcW", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","17/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-025", name: "Jeremi Demisha Zura Sembiring Kemb", age: 11, school: "4 SD", class: "Cahaya", photo: "1_1FOs0DLbegs278q2wuXzyjwzAB9sGvO", history: ["4/1/2026","11/1/2026","17/5/2026","28/6/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-026", name: "Kevin", age: 11, school: "4 SD", class: "Cahaya", photo: "1ibZyXrMACzRciN1rQnq-vxQSfQ0XhEtK", history: ["4/1/2026","11/1/2026","31/5/2026","14/6/2026","05/7/2026","12/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-027", name: "Dwi", age: 11, school: "4 SD", class: "Cahaya", photo: "12yRobu40NCiIiuTvuT57LTV4701rMq5K", history: ["4/1/2026","11/1/2026","31/5/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-028", name: "Kesya", age: 10, school: "3 SD", class: "Cahaya", photo: "1IJxZ_rhS4XX6PubJIfiGPchVfO2a93rY", history: ["4/1/2026","11/1/2026","24/5/2026","05/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-029", name: "Aver Surbakti", age: 9, school: "3 SD", class: "Cahaya", photo: "1RTU6ao9Rbx_CK_Y2UUJ82eQ6N9zzhdEg", history: ["4/1/2026","11/1/2026","10/5/2026","14/6/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-030", name: "Hizkia", age: 11, school: "5 SD", class: "Cahaya", photo: "1CukiMcR8HLf64b0pjxkKKl6TzReq-4Iu", history: ["4/1/2026","11/1/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-031", name: "Kristina", age: 10, school: "4 SD", class: "Cahaya", photo: "13IoLkVTUdjRp4BTBbCSiOBUUCUzrqQL1", history: ["4/1/2026","11/1/2026","14/6/2026","05/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-032", name: "Cesley", age: 10, school: "4 SD", class: "Cahaya", photo: "1N9lFzygZrQNc-du_6quBEmRDiSbC6Ex5", history: ["4/1/2026","11/1/2026","28/6/2026","05/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-033", name: "Marselino Ananta Sianturi", age: 10, school: "3 SD", class: "Cahaya", photo: "1IGMwp1NfLehVbS7fQd0as-TpL90zMo8p", history: ["4/1/2026","11/1/2026","16/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-034", name: "Yesril Elvano Ginting", age: 8, school: "3 SD", class: "Cahaya", photo: "1QNTh97TyDCuEupE16pq81zB7jDIU5o9a", history: ["4/1/2026","11/1/2026","8/3/2026","29/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-035", name: "Elzira Br Ginting", age: 8, school: "3 SD", class: "Cahaya", photo: "1uYTBx7L6T3XKpLn4p_YKWhhsT-uBUe_7", history: ["4/1/2026","11/1/2026","8/3/2026","29/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-036", name: "Giles Hagai Karo Karo", age: 8, school: "3 SD", class: "Cahaya", photo: "1Ngf2JMe6cTxH8_x4R1L9bgnq4re9S4Tz", history: ["4/1/2026","11/1/2026","8/3/2026","29/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-037", name: "Yafet Andreas Brahmana", age: 8, school: "3 SD", class: "Cahaya", photo: "1O0lRiRvYMzp02s1Ofx-sv3XVGiH0yjQu", history: ["4/1/2026","11/1/2026","8/3/2026","29/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-038", name: "Kristin", age: 10, school: "4 SD", class: "Cahaya", photo: "1GFdLIWnbEtbDOPOc-ewfrHgXWyhcEHVG", history: ["4/1/2026","6/9/2026","13/9/2026","11/10/2026","25/10/2026"] },
+            { id: "IMN-039", name: "Lena", age: 9, school: "3 SD", class: "Cahaya", photo: "1HutFImTIm56LOopwQTxPybVfEEysqP6d", history: ["4/1/2026","6/9/2026","13/9/2026","11/10/2026","25/10/2026"] },
+            { id: "IMN-040", name: "Tasya", age: 10, school: "4 SD", class: "Cahaya", photo: "1hBMoqyOF0CTVftJtYpPIBE7QuHxBrrCe", history: ["4/1/2026","6/9/2026","13/9/2026","11/10/2026","25/10/2026"] },
+            { id: "IMN-041", name: "Betris", age: 9, school: "3 SD", class: "Cahaya", photo: "1r1qqvZXmw2xDqZ-VoE4FuyeqsVqgTmB6", history: ["4/1/2026","6/9/2026","13/9/2026","11/10/2026","25/10/2026"] },
+
+            // KELAS BINTANG
+            { id: "IMN-0003", name: "Yoel Ginting", age: 8, school: "2 SD", class: "Bintang", photo: "1c_x_KaBGdkfV1PPZOb2oMwfea6hjS5rU", history: ["4/1/2026","11/1/2026","8/3/2026","5/4/2026","3/5/2026","14/6/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0005", name: "Fahlef Surbakti", age: 9, school: "3 SD", class: "Bintang", photo: "1dRNH9h-EimzAxgOxy6fni89lEEM1IAng", history: ["4/1/2026","11/1/2026","8/3/2026","30/8/2026","6/9/2026","4/10/2026","25/10/2026"] },
+            { id: "IMN-0007", name: "Maria Sibarani", age: 8, school: "1 SD", class: "Bintang", photo: "1ExMpD2v7g4KA5zyHIjxFxlF_NZKct-Xn", history: ["4/1/2026","11/1/2026","8/3/2026","5/4/2026","10/5/2026","24/5/2026","31/5/2026","14/6/2026","05/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0008", name: "Helda Sibarani", age: 6, school: "TK", class: "Bintang", photo: "1OjISM805fKoktAIfg5EYXbv3WiaFlvys", history: ["4/1/2026","11/1/2026","5/4/2026","8/3/2026","14/6/2026","28/6/2026","05/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0009", name: "Velika Adriella Br Sitepu", age: 4, school: "Belum Sekolah", class: "Bintang", photo: "1hvNyCl_3WOncaMa_vVqXuEB_gPJd7hoD", history: ["4/1/2026","11/1/2026","8/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00010", name: "Gareth Dnoel Sombolon", age: 7, school: "1 SD", class: "Bintang", photo: "1mHqulG0C69i1MXOU5xbHxD982eb5Ve0b", history: ["4/1/2026","11/1/2026","8/3/2026","29/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00011", name: "Rafa Sinaga", age: 8, school: "1 SD", class: "Bintang", photo: "1LWN7B88q4hrU0rZsw9-zOGCkZLCWlnew", history: ["4/1/2026","11/1/2026","8/3/2026","5/4/2026","3/5/2026","17/5/2026","24/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00012", name: "Tesalonika Sinaga", age: 3, school: "Belum Sekolah", class: "Bintang", photo: "1wcnpFl8nwOqJDTvxdzT9f75TmrMZa0AO", history: ["4/1/2026","11/1/2026","8/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00013", name: "Desen Purba", age: 9, school: "3 SD", class: "Bintang", photo: "1pBzraJnZyu-CPWkdQJmD7RE73tJG0HJv", history: ["4/1/2026","11/1/2026","8/3/2026","05/7/2026","9/8/2026","23/8/2026","30/8/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00014", name: "Elyora Purba", age: 4, school: "Belum Sekolah", class: "Bintang", photo: "1hFdZcmRjxYWAx7s8DS_Q_9-P1OmEu66W", history: ["4/1/2026","11/1/2026","8/3/2026","29/3/2026","5/4/2026","3/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00016", name: "Jesen Sitepu", age: 2, school: "Belum Sekolah", class: "Bintang", photo: "16egK2BXQt7pnQLGnbdv_ionLcV2WlAHA", history: ["4/1/2026","11/1/2026","8/3/2026","29/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00017", name: "Aksel Natan Silalahi", age: 6, school: "TK", class: "Bintang", photo: "1LYIy91a_VMElFttMMnHwebYCUJUuZgcJ", history: ["4/1/2026","11/1/2026","8/3/2026","5/4/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00018", name: "Hensen Sitepu", age: 7, school: "1 SD", class: "Bintang", photo: "1kMHFQXZDqFKVu_79j0rtxwqZZKmqyOH2", history: ["4/1/2026","11/1/2026","8/3/2026","29/3/2026","5/4/2026","10/5/2026","17/5/2026","24/5/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00019", name: "Ilona Siahaan", age: 1, school: "Belum Sekolah", class: "Bintang", photo: "1EOOtEPfksPQj3Sqpjhit7Hd1ULGleKJx", history: ["4/1/2026","11/1/2026","8/3/2026","5/4/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","2/8/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00020", name: "Jediarga Ginting", age: 5, school: "Belum Sekolah", class: "Bintang", photo: "1k3z-T_-sufROMLAjbLYbvGPj3kYdpAO5", history: ["4/1/2026","11/1/2026","29/3/2026","5/4/2026","3/5/2026","31/5/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00021", name: "Alvito Lubis", age: 6, school: "TK", class: "Bintang", photo: "1iD4JdpVRdO6Pp40gwEfAoMacY5q7IEPg", history: ["4/1/2026","11/1/2026","29/3/2026","5/4/2026","24/5/2026","31/5/2026","14/6/2026","28/6/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00022", name: "Dea Elnora Br purba", age: 8, school: "2 SD", class: "Bintang", photo: "1dqha2EwcSMVMF94vzNwoQsyxJoFLUgbd", history: ["4/1/2026","11/1/2026","5/4/2026","3/5/2026","17/5/2026","31/5/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00023", name: "Jesifa Acira Fayona", age: 8, school: "1 SD", class: "Bintang", photo: "1bVU0zjQDayIJbNFyW88ADO5nY0kVKO7J", history: ["4/1/2026","11/1/2026","5/4/2026","29/3/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00024", name: "Kavya Miracle Joe", age: 7, school: "TK", class: "Bintang", photo: "1H8KKbTm8awGy3eBkhto-wHdotAiNIOa6", history: ["4/1/2026","11/1/2026","29/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00025", name: "Zivya Miracle Joe", age: 7, school: "TK", class: "Bintang", photo: "1HJo8efC9_jIBWiAQ7T1ut_X8wAjlEd9T", history: ["4/1/2026","11/1/2026","29/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00026", name: "Clairine Misella Br Ginting", age: 6, school: "TK", class: "Bintang", photo: "1spOkYjpmXVbK-bkxhMiFTiblkwt4khXK", history: ["4/1/2026","11/1/2026","29/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00027", name: "Gloria Cantika Br Simanjorang", age: 6, school: "TK", class: "Bintang", photo: "1KoGONHl_9MmpnILAYzlmgRzqX-QE4MxG", history: ["4/1/2026","11/1/2026","5/4/2026","3/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00028", name: "Diva Bintang", age: 6, school: "TK", class: "Bintang", photo: "1DzAz2R6RLXNoD441AxoiDoFCqMIoHlYd", history: ["4/1/2026","11/1/2026","5/4/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00029", name: "Mika Ulisinar Sihite", age: 10, school: "3 SD", class: "Bintang", photo: "1Srl8CNfQ6Z97_0GRFXkog1KOWArrs8ec", history: ["4/1/2026","11/1/2026","5/4/2026","05/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00030", name: "Aurelia Br Tarigan", age: 6, school: "TK", class: "Bintang", photo: "1aDIIJesac_MsoZZqvcMpDC7aJi9MRy0A", history: ["4/1/2026","11/1/2026","5/4/2026","29/3/2026","3/5/2026","17/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00031", name: "Joe Rapha Ginting", age: 1, school: "Belum Sekolah", class: "Bintang", photo: "13uDFYHuLzQxQdZGDC3EyZ0JZUW8rprIl", history: ["4/1/2026","11/1/2026","5/4/2026","05/7/2026","12/7/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00032", name: "Chasia Queensa Br Ginting", age: 6, school: "Belum Sekolah", class: "Bintang", photo: "19i7sj8V-qxNkyDUHIn6YshkOIGbDTANv", history: ["4/1/2026","11/1/2026","29/3/2026","5/4/2026","3/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00033", name: "Axel Kenneth Ginting", age: 3, school: "Belum Sekolah", class: "Bintang", photo: "1lU5KDXuWwlbmpQI0Afn0hKV4oPZ0puVU", history: ["4/1/2026","11/1/2026","29/3/2026","5/4/2026","3/5/2026","17/5/2026","24/5/2026","05/7/2026","12/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026"] },
+            { id: "IMN-00034", name: "Revanya Abigail Br Surbakti", age: 9, school: "2 SD", class: "Bintang", photo: "1n1LujZ-u0FMyNbMtCOb_IoiFyUfTuRhP", history: ["4/1/2026","11/1/2026","29/3/2026","3/5/2026","10/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","05/7/2026","12/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00035", name: "Thiago Ginting", age: 5, school: "Belum Sekolah", class: "Bintang", photo: "1ZTmACpCjcpTJAhFSFN92jxlCVbh3aILb", history: ["4/1/2026","11/1/2026","8/3/2026","29/3/2026","5/4/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00036", name: "Alizka Gabriella Purba", age: 6, school: "1 SD", class: "Bintang", photo: "1Rf9ZOKio2ROAHaCumbgccjH8lMeEvbiA", history: ["4/1/2026","11/1/2026","31/5/2026","14/6/2026","28/6/2026","05/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00037", name: "Tania Hutagaul", age: 4, school: "Belum Sekolah", class: "Bintang", photo: "1daGc_pcIMUZ7-NLoq6dE0FxrqYg4RENw", history: ["4/1/2026","11/1/2026","24/5/2026","05/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00038", name: "Aletha Blessing D Br G", age: 3, school: "Belum Sekolah", class: "Bintang", photo: "1ZNczxryZr78chubYHrRsNdV553kUf2v2", history: ["4/1/2026","11/1/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00039", name: "Yohana Sitepu", age: 1, school: "Belum Sekolah", class: "Bintang", photo: "1mfvIxtkHKpXhhTToOsl-oR7niNN10juk", history: ["4/1/2026","11/1/2026","24/5/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00040", name: "Cahaya Karunia", age: 8, school: "2 SD", class: "Bintang", photo: "1H7K1s4ZAnXiKD1fuXj3mpwaqCD7eUs2t", history: ["4/1/2026","11/1/2026","24/5/2026","31/5/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00041", name: "Sergio Sagala", age: 7, school: "TK", class: "Bintang", photo: "1w3JpPixV14TVpU5f0Yh5bxIQS63PrbNe", history: ["4/1/2026","11/1/2026","24/5/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00042", name: "Yasha Elisheva Br T", age: 3, school: "Belum Sekolah", class: "Bintang", photo: "1L09Mb7b91Pb4LCMEnwVBAJps_HQmWTEU", history: ["4/1/2026","11/1/2026","12/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00043", name: "Nada Br Ginting", age: 5, school: "Belum Sekolah", class: "Bintang", photo: "18sUGUhbFjUdKsjifZrFAGJZPPRVihQa-", history: ["4/1/2026","11/1/2026","17/5/2026","24/5/2026","14/6/2026","28/6/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00044", name: "Nazwa Rusna br Ginting", age: 7, school: "1 SD", class: "Bintang", photo: "1bR7TwPM1_EAKEAJc6pBI50JvvAh-s_AV", history: ["4/1/2026","11/1/2026","17/5/2026","24/5/2026","14/6/2026","28/6/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00045", name: "Cahaya Br Silalahi", age: 8, school: "3 SD", class: "Bintang", photo: "1BeVA9XyeZdzCijTSm44HBuQ4KvZq9bQD", history: ["4/1/2026","11/1/2026","17/5/2026","05/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00046", name: "Fahri Manik", age: 7, school: "Belum Sekolah", class: "Bintang", photo: "1tYItWqJSsmP41prFU1mLQoPfgBiKpUIu", history: ["4/1/2026","11/1/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00047", name: "Gio Sagala", age: 7, school: "TK", class: "Bintang", photo: "1ZjWx9a6CfzhLawIOTJgNouHxNq0Wy8fq", history: ["4/1/2026","07/6/2026","11/1/2026","05/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00048", name: "Valeri br Sinukaban", age: 6, school: "TK", class: "Bintang", photo: "1rE1vzroYYsqSTYdYXfDzYreS7JfI2Owr", history: ["4/1/2026","11/1/2026","24/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00049", name: "Helda br Tarigan", age: 6, school: "TK", class: "Bintang", photo: "1f8R8gCjpU_mK-tU_GRJk_K_vQykfcsZx", history: ["4/1/2026","11/1/2026","07/6/2026","05/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00050", name: "Exel purba", age: 1, school: "Belum Sekolah", class: "Bintang", photo: "1ZmluWn0wV7fTlTroP9M3UkUFU4ya3im_", history: ["4/1/2026","11/1/2026","31/5/2026","05/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00051", name: "Marion Emanuella", age: 4, school: "Belum Sekolah", class: "Bintang", photo: "1RKYyHdkynvEX52xcenMK1uCD5YBvn5mL", history: ["4/1/2026","11/1/2026","31/5/2026","05/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00052", name: "Gevariel Khen Bumi Siahaan", age: 1, school: "Belum Sekolah", class: "Bintang", photo: "1GrFbQa3YUS2qDeBGjB8uf-RABI71thsT", history: ["4/1/2026","11/1/2026","29/3/2026","31/5/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00053", name: "Kelyn", age: 6, school: "-", class: "Bintang", photo: "1RgXdUcfTlQ10jSpiUH9j5ym1m41Iq28J", history: ["4/1/2026","11/1/2026","31/5/2026","05/7/2026","9/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00054", name: "Gideon anugerah Langit Siahaan", age: 2, school: "Belum Sekolah", class: "Bintang", photo: "1ePiFo1ycFDUyyrYTgrKt2ylFwzgSjfS5", history: ["4/1/2026","11/1/2026","29/3/2026","31/5/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00055", name: "Faleri Naura Karisa", age: 7, school: "2 SD", class: "Bintang", photo: "1yT3EJY4NMuH8FSv6RErMIkpw-cW2tX4W", history: ["4/1/2026","11/1/2026","16/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","25/10/2026"] },
+            { id: "IMN-00056", name: "Arga Marilitua Siregar", age: 8, school: "2 SD", class: "Bintang", photo: "1KIj8bLY_b9GUI8vmEAm1UJnvUQ-gAFzq", history: ["4/1/2026","11/1/2026","16/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","4/10/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-00057", name: "Glen", age: 7, school: "1 SD", class: "Bintang", photo: "1PfqXbDCYw5ssijjOjvCLOVDahji-hR-x", history: ["4/1/2026","6/9/2026"] },
+            { id: "IMN-00058", name: "Peo", age: 7, school: "Belum Sekolah", class: "Bintang", photo: "15Yrd4HSRPxhL5sk654Y-WbnMInEQQmmA", history: ["4/1/2026","6/9/2026"] },
+
+            // KELAS PRA REMAJA
+            { id: "IMN-0040", name: "Cristiano de Caprio", age: 13, school: "7 SMP", class: "Pra Remaja", photo: "1xT3SRcLx6IWYH3M9yLIArZ8w0BxGfQZj", history: ["4/1/2026","11/1/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","21/6/2026","05/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0041", name: "Risky Tuahta Bangun", age: 15, school: "9 SMP", class: "Pra Remaja", photo: "1f-Dz_4kpezqsti7zUoXXN4pQkpJyAMwX", history: ["4/1/2026","11/1/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0042", name: "Yonatan Ceristian Sitepu", age: 13, school: "7 SMP", class: "Pra Remaja", photo: "1AQ0PzisxdHRWNcnyGWulvw6Rs-9-A1o_", history: ["4/1/2026","11/1/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","14/6/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0043", name: "Calvien Aldiano Sagala", age: 12, school: "6 SD", class: "Pra Remaja", photo: "1seA2C_QMVJHo2q7OyBW5B_L5rSbuKhWA", history: ["4/1/2026","11/1/2026","3/5/2026","24/5/2026","21/6/2026","05/7/2026","19/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0044", name: "Mario Ramah Suka Purba", age: 15, school: "9 SMP", class: "Pra Remaja", photo: "1cV_2dMJ-rcbDOjM1hPvca1lob9Gsujpx", history: ["4/1/2026","11/1/2026","3/5/2026","24/5/2026","05/7/2026","19/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0045", name: "Rafael", age: 14, school: "8 SMP", class: "Pra Remaja", photo: "1SmKxhk89MmP3upIWUCtzMjZnUkdSaBb6", history: [] },
+            { id: "IMN-0046", name: "Griselda Fidelis Br Tarigan", age: 13, school: "7 SMP", class: "Pra Remaja", photo: "1BiJssjOLtj5Zm18aZebNxrSN7VlgX0we", history: ["4/1/2026","11/1/2026","3/5/2026","17/5/2026","31/5/2026","07/6/2026","21/6/2026","05/7/2026","19/7/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","27/9/2026","11/10/2026","18/10/2026"] },
+            { id: "IMN-0047", name: "Mila Febriani Br Silalahi", age: 14, school: "8 SMP", class: "Pra Remaja", photo: "1pvhSfp0RGaXsV1Kcft9MxbmimXpIJvpu", history: ["4/1/2026","11/1/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","21/6/2026","05/7/2026","19/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0048", name: "Nadine Izura Kinata Kembaren", age: 14, school: "8 SMP", class: "Pra Remaja", photo: "1srtWCBLmZOcnyE9JLtWNIO_W0v3SeDCv", history: ["4/1/2026","11/1/2026","10/5/2026","17/5/2026","24/5/2026","07/6/2026","14/6/2026","21/6/2026","05/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0049", name: "Nasya Ekklesia Mendrofa", age: 13, school: "7 SMP", class: "Pra Remaja", photo: "1GpdgLtUwulwQDZ6Epez4bcCzdM8MY8y3", history: ["4/1/2026","11/1/2026","3/5/2026","10/5/2026","17/5/2026","07/6/2026","14/6/2026","05/7/2026","19/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0050", name: "Nachelle Olivia Sitanggang", age: 13, school: "7 SMP", class: "Pra Remaja", photo: "191NnQ1UP1VYbTA8R_LwXFLTQEvbNAtuQ", history: ["4/1/2026","11/1/2026","10/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","05/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0051", name: "Heppi Muliahati Silalahi", age: 13, school: "7 SMP", class: "Pra Remaja", photo: "1ireVA5g0lNE6t4lhUPW-oGwlnWeYQcW2", history: ["4/1/2026","11/1/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","21/6/2026","05/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0052", name: "Algibort Robert Silalahi", age: 14, school: "7 SMP", class: "Pra Remaja", photo: "1qUfUIixRhjEk5T4MNM3VanTMguZdw7wC", history: ["4/1/2026","11/1/2026","10/5/2026","17/5/2026","24/5/2026","07/6/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0055", name: "Davis Putra Gama Sinuhaji", age: 13, school: "6 SD", class: "Pra Remaja", photo: "1MqaXfm_Ycv1CR5Kg9vDS1RVV5JX1_Ogb", history: ["4/1/2026","11/1/2026","3/5/2026","10/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","21/6/2026","05/7/2026","19/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-0054", name: "Lamrauli Br Silalahi", age: 15, school: "8 SMP", class: "Pra Remaja", photo: "14g5VmAaZhW-0y7eYpVc-fjFCH3nF2FHY", history: ["4/1/2026","11/1/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","05/7/2026","19/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-003", name: "Lexi Felicia", age: 12, school: "6 SD", class: "Pra Remaja", photo: "1-MOF_UXawWKy8Wn7rV5Xpqxb6GtcNjlC", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-019", name: "Adel Esterina Br Sinuraya", age: 11, school: "6 SD", class: "Pra Remaja", photo: "1kVJFJagyQyYQs1-YNMVF2amKFivCyj9R", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-013", name: "Vanesa Br Ginting", age: 12, school: "6 SD", class: "Pra Remaja", photo: "1UgYwHXkBtJqHHz6aDGglZ3BKKsi-82tw", history: ["4/1/2026","11/1/2026","8/3/2026","10/5/2026","17/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-023", name: "Marzelo Geofrey", age: 12, school: "6 SD", class: "Pra Remaja", photo: "19Xm_iD_EZfR8o5vjYSiNHfsZ1OtJCy4f", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-018", name: "Okto Zendate", age: 12, school: "6 SD", class: "Pra Remaja", photo: "1rb4wSS4KddWbhYrKTmY2QOi0NmVhx8Du", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","17/5/2026","24/5/2026","31/5/2026","07/6/2026","14/6/2026","28/6/2026","05/7/2026","12/7/2026","19/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] },
+            { id: "IMN-012", name: "Charlotte Sitanggang", age: 11, school: "6 SD", class: "Pra Remaja", photo: "1vvFc8k3geEZjk7dx_3Vms26CTFTMYQr9", history: ["4/1/2026","11/1/2026","8/3/2026","3/5/2026","10/5/2026","17/5/2026","31/5/2026","14/6/2026","05/7/2026","12/7/2026","26/7/2026","2/8/2026","9/8/2026","16/8/2026","23/8/2026","30/8/2026","6/9/2026","13/9/2026","20/9/2026","27/9/2026","11/10/2026","18/10/2026","25/10/2026"] }
+        ];
+           // State Management
+        let students = [];
+        let currentClass = 'Semua';
+        let searchQuery = '';
+        let uploadTargetStudentId = null;
+
+        // Mendapatkan Tanggal Hari Ini dalam Format D/M/YYYY
+        function getTodayDateString() {
+            const today = new Date();
+            const d = today.getDate();
+            const m = today.getMonth() + 1;
+            const y = today.getFullYear();
+            return `${d}/${m}/${y}`;
+        }
+
+        // Inisialisasi Aplikasi
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            loadData();
+            updateCurrentDateDisplay();
+            
+            // Auto login jika session tersimpan
+            if (localStorage.getItem('gpdi_logged_in') === 'true') {
+                showDashboard();
+            }
+        });
+
+        function updateCurrentDateDisplay() {
+            const today = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const formatted = today.toLocaleDateString('id-ID', options);
+            
+            document.getElementById('current-date').innerText = formatted;
+            document.getElementById('today-code').innerText = `Sesi Hari Ini: ${getTodayDateString()}`;
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('gpdi_students_data');
+            if (saved) {
+                try {
+                    students = JSON.parse(saved);
+                } catch (e) {
+                    students = [...INITIAL_STUDENTS];
+                }
+            } else {
+                students = [...INITIAL_STUDENTS];
+                saveData();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('gpdi_students_data', JSON.stringify(students));
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+
+            if (u && p) {
+                localStorage.setItem('gpdi_logged_in', 'true');
+                showDashboard();
+                showToast('Berhasil masuk!', 'success');
+            } else {
+                showToast('Username dan password harus diisi', 'error');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('gpdi_logged_in');
+            document.getElementById('main-dashboard').classList.add('hidden');
+            document.getElementById('login-screen').classList.remove('hidden');
+            showToast('Anda telah keluar', 'info');
+        }
+
+        function showDashboard() {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-dashboard').classList.remove('hidden');
+            renderGrid();
+            updateStats();
+        }
+
+        // Helper Konversi Foto Drive
+        function getPhotoUrl(photo) {
+            if (!photo || photo.trim() === '') {
+                return null;
+            }
+            if (photo.startsWith('data:') || photo.startsWith('http://') || photo.startsWith('https://')) {
+                return photo;
+            }
+            // Google Drive ID
+            return `https://lh3.googleusercontent.com/d/${photo.trim()}`;
+        }
+
+        // Render Kartu Murid
+        function renderGrid() {
+            const grid = document.getElementById('student-grid');
+            grid.innerHTML = '';
+
+            const todayStr = getTodayDateString();
+
+            const filtered = students.filter(s => {
+                const matchClass = (currentClass === 'Semua') || (s.class.toLowerCase() === currentClass.toLowerCase());
+                const matchQuery = (s.name.toLowerCase().includes(searchQuery.toLowerCase())) || 
+                                   (s.id.toLowerCase().includes(searchQuery.toLowerCase()));
+                return matchClass && matchQuery;
+            });
+
+            if (filtered.length === 0) {
+                grid.innerHTML = `
+                    <div class="col-span-full py-16 text-center bg-white rounded-3xl border border-slate-200">
+                        <i data-lucide="users" class="w-12 h-12 text-slate-300 mx-auto mb-3"></i>
+                        <p class="text-slate-500 font-semibold text-lg">Tidak ada data murid ditemukan</p>
+                        <p class="text-slate-400 text-xs mt-1">Coba sesuaikan kata kunci pencarian atau filter kelas.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+                return;
+            }
+
+            filtered.forEach(s => {
+                const isPresent = s.history.includes(todayStr);
+                const photoSrc = getPhotoUrl(s.photo);
+                const totalHadir = s.history.length;
+
+                const card = document.createElement('div');
+                card.className = `bg-white rounded-3xl border transition-all duration-300 p-5 flex flex-col justify-between card-glow relative overflow-hidden ${
+                    isPresent ? 'border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/20' : 'border-slate-200'
+                }`;
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-start justify-between gap-3 mb-4">
+                            <div class="relative group cursor-pointer" onclick="triggerPhotoUpload('${s.id}')" title="Klik untuk ganti foto">
+                                <div class="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100 border border-slate-200 flex items-center justify-center shrink-0 shadow-inner">
+                                    ${
+                                        photoSrc 
+                                        ? `<img src="${photoSrc}" alt="${s.name}" class="w-full h-full object-cover" onerror="this.onerror=null; this.parentNode.innerHTML='<div class=\'bg-indigo-100 text-indigo-600 font-black text-xl w-full h-full flex items-center justify-center\'>${s.name.charAt(0)}</div>'">`
+                                        : `<div class="bg-indigo-100 text-indigo-600 font-black text-xl w-full h-full flex items-center justify-center">${s.name.charAt(0)}</div>`
+                                    }
+                                </div>
+                                <div class="absolute inset-0 bg-black/40 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-xs">
+                                    <i data-lucide="camera" class="w-5 h-5"></i>
+                                </div>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <span class="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 inline-block mb-1">
+                                    ${s.class}
+                                </span>
+                                <h4 class="font-extrabold text-slate-900 text-base leading-snug truncate" title="${s.name}">${s.name}</h4>
+                                <p class="text-xs text-indigo-600 font-bold tracking-wider">${s.id}</p>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-1 mb-4 text-xs font-medium text-slate-600">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Umur / Sekolah:</span>
+                                <span class="font-bold text-slate-700">${s.age} Thn • ${s.school}</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Total Hadir:</span>
+                                <span class="font-bold text-indigo-600">${totalHadir} Sesi</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button onclick="toggleAttendance('${s.id}')" 
+                        class="w-full py-3.5 px-4 rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.98] ${
+                            isPresent 
+                            ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-200' 
+                            : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-md'
+                        }">
+                        <i data-lucide="${isPresent ? 'check-circle-2' : 'user-check'}" class="w-4 h-4"></i>
+                        <span>${isPresent ? 'Hadir Hari Ini' : 'Tandai Hadir'}</span>
+                    </button>
+                `;
+
+                grid.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        // Toggle Kehadiran Murid
+        function toggleAttendance(studentId) {
+            const todayStr = getTodayDateString();
+            const student = students.find(s => s.id === studentId);
+            if (!student) return;
+
+            const idx = student.history.indexOf(todayStr);
+            if (idx > -1) {
+                student.history.splice(idx, 1);
+                showToast(`Kehadiran ${student.name} dibatalkan`, 'info');
+            } else {
+                student.history.push(todayStr);
+                showToast(`${student.name} berhasil ditandai HADIR!`, 'success');
+            }
+
+            saveData();
+            renderGrid();
+            updateStats();
+        }
+
+        // Update Statistik Dashboard
+        function updateStats() {
+            const todayStr = getTodayDateString();
+            const total = students.length;
+            const presentCount = students.filter(s => s.history.includes(todayStr)).length;
+            const percent = total > 0 ? Math.round((presentCount / total) * 100) : 0;
+
+            document.getElementById('stat-present').innerText = presentCount;
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-percent').innerText = `${percent}%`;
+            document.getElementById('stat-bar').style.width = `${percent}%`;
+        }
+
+        // Filter Kelas
+        function filterClass(className) {
+            currentClass = className;
+            const btns = document.querySelectorAll('.tab-btn');
+            btns.forEach(b => {
+                if (b.innerText.toLowerCase() === className.toLowerCase()) {
+                    b.className = 'tab-btn active px-6 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap bg-indigo-600 text-white shadow-lg transition-all';
+                } else {
+                    b.className = 'tab-btn px-6 py-2.5 rounded-xl text-sm font-bold whitespace-nowrap text-slate-500 hover:text-slate-800 transition-all';
+                }
+            });
+            renderGrid();
+        }
+
+        // Pencarian Murid
+        function handleSearch() {
+            searchQuery = document.getElementById('search-input').value;
+            renderGrid();
+        }
+
+        // Modal Handler
+        function toggleModal(modalId) {
+            const el = document.getElementById(`modal-${modalId}`);
+            if (el) {
+                el.classList.toggle('hidden');
+                if (!el.classList.contains('hidden')) {
+                    lucide.createIcons();
+                }
+            }
+        }
+
+        // Manual Input Kode Hadir
+        function submitManual() {
+            const input = document.getElementById('manual-input');
+            const code = input.value.trim().toUpperCase();
+            
+            if (!code) {
+                showToast('Silakan masukkan Kode Murid!', 'error');
+                return;
+            }
+
+            const student = students.find(s => s.id.toUpperCase() === code);
+            if (student) {
+                const todayStr = getTodayDateString();
+                if (!student.history.includes(todayStr)) {
+                    student.history.push(todayStr);
+                    saveData();
+                    renderGrid();
+                    updateStats();
+                    showToast(`${student.name} (${student.id}) Berhasil Hadir!`, 'success');
+                } else {
+                    showToast(`${student.name} sudah tercatat hadir hari ini.`, 'info');
+                }
+                input.value = '';
+                toggleModal('manual');
+            } else {
+                showToast(`Kode murid "${code}" tidak ditemukan!`, 'error');
+            }
+        }
+
+        // Handler Foto Kustom
+        function triggerPhotoUpload(studentId) {
+            uploadTargetStudentId = studentId;
+            document.getElementById('photo-upload').click();
+        }
+
+        function handlePhotoFile(event) {
+            const file = event.target.files[0];
+            if (!file || !uploadTargetStudentId) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Image = e.target.result;
+                const student = students.find(s => s.id === uploadTargetStudentId);
+                if (student) {
+                    student.photo = base64Image;
+                    saveData();
+                    renderGrid();
+                    showToast(`Foto ${student.name} berhasil diperbarui!`, 'success');
+                }
+                uploadTargetStudentId = null;
+                event.target.value = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Toast Notification
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            
+            if (type === 'success') {
+                toast.className = 'fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] px-8 py-4 rounded-2xl text-white shadow-2xl font-bold bg-emerald-600 transition-all scale-100';
+            } else if (type === 'error') {
+                toast.className = 'fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] px-8 py-4 rounded-2xl text-white shadow-2xl font-bold bg-rose-600 transition-all scale-100';
+            } else {
+                toast.className = 'fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] px-8 py-4 rounded-2xl text-white shadow-2xl font-bold bg-indigo-600 transition-all scale-100';
+            }
+
+            toast.classList.remove('hidden');
+
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Download Laporan Absensi (PDF)
+        function downloadPDF(className) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            const teacherName = document.getElementById('teacher-name').value.trim() || 'Guru Sekolah Minggu';
+            const todayStr = getTodayDateString();
+
+            const targetStudents = students.filter(s => className === 'Semua' || s.class.toLowerCase() === className.toLowerCase());
+
+            if (targetStudents.length === 0) {
+                showToast(`Tidak ada data murid untuk kelas ${className}`, 'error');
+                return;
+            }
+
+            // Header Laporan
+            doc.setFontSize(18);
+            doc.setTextColor(30, 41, 59);
+            doc.text("GPdI Immanuel Berastagi", 14, 20);
+            
+            doc.setFontSize(12);
+            doc.setTextColor(99, 102, 241);
+            doc.text(`LAPORAN ABSENSI SEKOLAH MINGGU - KELAS ${className.toUpperCase()}`, 14, 28);
+
+            doc.setFontSize(10);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`Tanggal Kebaktian : ${todayStr}`, 14, 36);
+            doc.text(`Guru Pendamping   : ${teacherName}`, 14, 42);
+
+            const tableData = targetStudents.map((s, index) => {
+                const isPresent = s.history.includes(todayStr);
+                return [
+                    index + 1,
+                    s.id,
+                    s.name,
+                    s.class,
+                    `${s.age} Thn (${s.school})`,
+                    isPresent ? 'HADIR' : 'ABSEN',
+                    `${s.history.length} Sesi`
+                ];
+            });
+
+            doc.autoTable({
+                startY: 48,
+                head: [['No', 'ID Murid', 'Nama Lengkap', 'Kelas', 'Umur / Sekolah', 'Status Hari Ini', 'Total Hadir']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255], fontStyle: 'bold' },
+                alternateRowStyles: { fillColor: [248, 250, 252] },
+                styles: { fontSize: 9, cellPadding: 3 }
+            });
+
+            doc.save(`Laporan_Absensi_GPdI_${className}_${todayStr.replace(/\//g, '-')}.pdf`);
+            showToast('Laporan PDF berhasil diunduh!', 'success');
+            toggleModal('report');
+        }
+
+        // Cetak Batch KIA (PDF)
+        function downloadBatchKIA(className) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+
+            const targetStudents = students.filter(s => className === 'Semua' || s.class.toLowerCase() === className.toLowerCase());
+
+            if (targetStudents.length === 0) {
+                showToast(`Tidak ada murid di kelas ${className}`, 'error');
+                return;
+            }
+
+            // Dimensi Kartu (Ukuran CR80 standar ~ 85mm x 54mm)
+            const cardW = 85;
+            const cardH = 54;
+            const marginX = 15;
+            const marginY = 15;
+            const gapX = 10;
+            const gapY = 10;
+            const cols = 2;
+            const rows = 4;
+
+            let cardIndex = 0;
+
+            targetStudents.forEach((s, i) => {
+                if (cardIndex > 0 && cardIndex % (cols * rows) === 0) {
+                    doc.addPage();
+                }
+
+                const pagePos = cardIndex % (cols * rows);
+                const col = pagePos % cols;
+                const row = Math.floor(pagePos / cols);
+
+                const x = marginX + col * (cardW + gapX);
+                const y = marginY + row * (cardH + gapY);
+
+                // Frame Kartu
+                doc.setDrawColor(226, 232, 240);
+                doc.setFillColor(255, 255, 255);
+                doc.roundedRect(x, y, cardW, cardH, 4, 4, 'FD');
+
+                // Header Kartu Gradient Blue/Indigo
+                doc.setFillColor(99, 102, 241);
+                doc.roundedRect(x, y, cardW, 14, 4, 4, 'F');
+                doc.rect(x, y + 10, cardW, 4, 'F');
+
+                doc.setTextColor(255, 255, 255);
+                doc.setFontSize(9);
+                doc.setFont("helvetica", "bold");
+                doc.text("KARTU IDENTITAS ANAK (KIA)", x + cardW / 2, y + 6, { align: "center" });
+                
+                doc.setFontSize(7);
+                doc.setFont("helvetica", "normal");
+                doc.text("GPdI Immanuel Berastagi", x + cardW / 2, y + 10, { align: "center" });
+
+                // Frame Foto Profil Placeholder
+                const photoX = x + 6;
+                const photoY = y + 18;
+                const photoW = 22;
+                const photoH = 28;
+
+                doc.setFillColor(241, 245, 249);
+                doc.setDrawColor(203, 213, 225);
+                doc.roundedRect(photoX, photoY, photoW, photoH, 2, 2, 'FD');
+                
+                doc.setTextColor(99, 102, 241);
+                doc.setFontSize(14);
+                doc.setFont("helvetica", "bold");
+                doc.text(s.name.charAt(0), photoX + photoW / 2, photoY + photoH / 2 + 2, { align: "center" });
+
+                // Detail Data Murid
+                const textX = photoX + photoW + 6;
+                let textY = y + 21;
+
+                doc.setTextColor(30, 41, 59);
+                doc.setFontSize(9);
+                doc.setFont("helvetica", "bold");
+                
+                // Truncate nama jika terlalu panjang
+                let displayName = s.name;
+                if (displayName.length > 22) displayName = displayName.substring(0, 20) + '..';
+                doc.text(displayName, textX, textY);
+
+                textY += 5;
+                doc.setFontSize(7);
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(99, 102, 241);
+                doc.text(`ID: ${s.id}`, textX, textY);
+
+                textY += 4.5;
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(100, 116, 139);
+                doc.text(`Kelas   : ${s.class}`, textX, textY);
+
+                textY += 4;
+                doc.text(`Umur    : ${s.age} Tahun`, textX, textY);
+
+                textY += 4;
+                doc.text(`Sekolah : ${s.school}`, textX, textY);
+
+                // Footer Barcode Placeholder / Badge
+                doc.setFillColor(248, 250, 252);
+                doc.setDrawColor(226, 232, 240);
+                doc.rect(x + 4, y + cardH - 6, cardW - 8, 4, 'FD');
+                
+                doc.setFontSize(5);
+                doc.setTextColor(148, 163, 184);
+                doc.text(`OFFICIAL SUNDAY SCHOOL CARD • ${s.id}`, x + cardW / 2, y + cardH - 3.5, { align: "center" });
+
+                cardIndex++;
+            });
+
+            doc.save(`KIA_Massal_GPdI_${className}.pdf`);
+            showToast('KIA PDF berhasil dicetak!', 'success');
+            toggleModal('kia-massal');
+        }
+    </script>
+</body>
+</html>
